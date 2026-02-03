@@ -5,12 +5,16 @@
 
 HOSTS="/etc/hosts"
 
-# Remove any IPv4 lines that contain "localhost"
-sed -i '/^127\.[0-9.]*[[:space:]].*\blocalhost\b/d' "$HOSTS"
+# Read the current hosts file FIRST (avoid read/write at same time)
+old_hosts="$(cat "$HOSTS")"
 
-# Remove any existing facebook.com line (anywhere)
-sed -i '/[[:space:]]facebook\.com\([[:space:]]\|$\)/d' "$HOSTS"
+# Build the new file content
+{
+    echo "127.0.0.2 localhost"
+    echo "8.8.8.8 facebook.com"
 
-# Add required mappings
-echo "127.0.0.2 localhost" >> "$HOSTS"
-echo "8.8.8.8 facebook.com" >> "$HOSTS"
+    # Keep everything else, but remove:
+    # - any IPv4 line that contains 'localhost'
+    # - any line that contains 'facebook.com'
+    printf "%s\n" "$old_hosts" | grep -vE '(^127\.[0-9.]+[[:space:]].*\blocalhost\b)|(\bfacebook\.com\b)' || true
+} | tee "$HOSTS" >/dev/null
